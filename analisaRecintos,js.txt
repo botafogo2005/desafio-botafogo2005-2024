@@ -1,0 +1,96 @@
+// Dados dos recintos
+const recintos = [
+  { numero: 1, bioma: "savana", tamanho: 10, animais: [{ especie: "macaco", quantidade: 3 }] },
+  { numero: 2, bioma: "floresta", tamanho: 5, animais: [] },
+  { numero: 3, bioma: "savana e rio", tamanho: 7, animais: [{ especie: "gazela", quantidade: 1 }] },
+  { numero: 4, bioma: "rio", tamanho: 8, animais: [] },
+  { numero: 5, bioma: "savana", tamanho: 9, animais: [{ especie: "leao", quantidade: 1 }] },
+];
+
+// Dados dos animais
+const animais = [
+  { especie: "leao", tamanho: 3, biomas: ["savana"], carnivoro: true },
+  { especie: "leopardo", tamanho: 2, biomas: ["savana"], carnivoro: true },
+  { especie: "crocodilo", tamanho: 3, biomas: ["rio"], carnivoro: true },
+  { especie: "macaco", tamanho: 1, biomas: ["savana", "floresta"], carnivoro: false },
+  { especie: "gazela", tamanho: 2, biomas: ["savana"], carnivoro: false },
+  { especie: "hipopotamo", tamanho: 4, biomas: ["savana", "rio"], carnivoro: false },
+];
+
+// Função para encontrar o animal pelo nome
+function encontrarAnimal(especie) {
+  return animais.find(animal => animal.especie.toLowerCase() === especie.toLowerCase());
+}
+
+// Função para verificar se o recinto pode acomodar o(s) animal(is)
+function verificarRecinto(recinto, especie, quantidade) {
+  const animal = encontrarAnimal(especie);
+  if (!animal) return "Animal inválido";
+  if (quantidade <= 0) return "Quantidade inválida";
+
+  // Verificar bioma
+  if (!animal.biomas.includes(recinto.bioma) && !(recinto.bioma === "savana e rio" && animal.especie === "hipopotamo")) {
+    return false;
+  }
+
+  // Verificar carnívoros só podem viver com sua própria espécie
+  if (animal.carnivoro && recinto.animais.length > 0 && recinto.animais.some(a => a.especie !== especie)) {
+    return false;
+  }
+
+  // Verificar espaço disponível
+  const espacoNecessario = (quantidade * animal.tamanho) + (recinto.animais.length > 0 ? 1 : 0); // 1 espaço extra para mais de uma espécie
+  const espacoOcupado = recinto.animais.reduce((total, a) => {
+    const animalExistente = encontrarAnimal(a.especie);
+    return total + a.quantidade * animalExistente.tamanho;
+  }, 0);
+  if (recinto.tamanho - espacoOcupado < espacoNecessario) {
+    return false;
+  }
+
+  // Regra para hipopótamos
+  if (animal.especie === "hipopotamo" && recinto.bioma !== "savana e rio" && recinto.animais.length > 0) {
+    return false;
+  }
+
+  // Regra para macacos (precisam de companhia)
+  if (animal.especie === "macaco" && quantidade === 1 && recinto.animais.length === 0) {
+    return false;
+  }
+
+  return true;
+}
+
+// Função para encontrar recintos viáveis
+function encontrarRecintos(especie, quantidade) {
+  const animal = encontrarAnimal(especie);
+  if (!animal) return "Animal inválido";
+  if (isNaN(quantidade) || quantidade <= 0) return "Quantidade inválida";
+
+  const recintosViaveis = recintos
+    .filter(recinto => verificarRecinto(recinto, especie, quantidade))
+    .map(recinto => {
+      const espacoOcupado = recinto.animais.reduce((total, a) => {
+        const animalExistente = encontrarAnimal(a.especie);
+        return total + a.quantidade * animalExistente.tamanho;
+      }, 0);
+      const espacoNecessario = quantidade * animal.tamanho + (recinto.animais.length > 0 ? 1 : 0);
+      const espacoLivre = recinto.tamanho - (espacoOcupado + espacoNecessario);
+      return `Recinto nro ${recinto.numero} (espaço livre: ${espacoLivre}, total: ${recinto.tamanho})`;
+    });
+
+  if (recintosViaveis.length === 0) return "Não há recinto viável";
+  return recintosViaveis.sort((a, b) => {
+    const numA = parseInt(a.match(/nro (\d+)/)[1]);
+    const numB = parseInt(b.match(/nro (\d+)/)[1]);
+    return numA - numB;
+  });
+}
+
+// Exemplo de uso
+console.log(encontrarRecintos("leao", 2)); // Testando com dois leões
+console.log(encontrarRecintos("macaco", 1)); // Testando com um macaco
+console.log(encontrarRecintos("hipopotamo", 3)); // Testando com três hipopótamos
+console.log(encontrarRecintos("girafa", 1)); // Testando com um animal inválido
+
+export { RecintosZoo as RecintosZoo };
